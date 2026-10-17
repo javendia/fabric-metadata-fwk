@@ -1,0 +1,114 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "name": "ACT_NB_MAINTENANCE",
+        "type": "TridentNotebook",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": {
+            "value": "@pipeline().libraryVariables.maintenanceNotebookId",
+            "type": "Expression"
+          },
+          "workspaceId": {
+            "value": "@pipeline().libraryVariables.controlWorkspaceId",
+            "type": "Expression"
+          },
+          "parameters": {
+            "bronze_workspace_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.bronzeWorkspaceId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "bronze_lakehouse_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.bronzeLakehouseId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "silver_workspace_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.silverWorkspaceId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "silver_lakehouse_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.silverLakehouseId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "gold_workspace_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.goldWorkspaceId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "gold_lakehouse_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.goldLakehouseId",
+                "type": "Expression"
+              },
+              "type": "string"
+            }
+          }
+        }
+      }
+    ],
+    "libraryVariables": {
+      "bronzeWorkspaceId": {
+        "type": "String",
+        "variableName": "bronzeWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "bronzeLakehouseId": {
+        "type": "String",
+        "variableName": "bronzeLakehouseId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "silverWorkspaceId": {
+        "type": "String",
+        "variableName": "silverWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "silverLakehouseId": {
+        "type": "String",
+        "variableName": "silverLakehouseId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "goldWorkspaceId": {
+        "type": "String",
+        "variableName": "goldWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "goldLakehouseId": {
+        "type": "String",
+        "variableName": "goldLakehouseId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "maintenanceNotebookId": {
+        "type": "String",
+        "variableName": "maintenanceNotebookId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlWorkspaceId": {
+        "type": "String",
+        "variableName": "controlWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      }
+    }
+  }
+}

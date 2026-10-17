@@ -1,0 +1,197 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "name": "ACT_VL_LoadedAt",
+        "type": "SetVariable",
+        "dependsOn": [],
+        "policy": {
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "variableName": "loadedAt",
+          "value": {
+            "value": "@utcNow('yyyy-MM-ddTHH:mm:ss')",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "ACT_COPY_SQLSERVER_GetData",
+        "type": "Copy",
+        "dependsOn": [
+          {
+            "activity": "ACT_VL_LoadedAt",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "source": {
+            "type": "SqlServerSource",
+            "additionalColumns": [
+              {
+                "name": "source_name",
+                "value": {
+                  "value": "@pipeline().parameters.source_name",
+                  "type": "Expression"
+                }
+              },
+              {
+                "name": "loaded_at",
+                "value": {
+                  "value": "@variables('loadedAt')",
+                  "type": "Expression"
+                }
+              }
+            ],
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None",
+            "datasetSettings": {
+              "annotations": [],
+              "type": "SqlServerTable",
+              "schema": [],
+              "typeProperties": {
+                "schema": {
+                  "value": "@pipeline().parameters.source_schema",
+                  "type": "Expression"
+                },
+                "table": {
+                  "value": "@pipeline().parameters.source_table_name",
+                  "type": "Expression"
+                },
+                "database": {
+                  "value": "@pipeline().parameters.source_database_name",
+                  "type": "Expression"
+                }
+              },
+              "externalReferences": {
+                "connection": "@pipeline().libraryVariables.sqlServerConnectionId"
+              }
+            }
+          },
+          "sink": {
+            "type": "ParquetSink",
+            "storeSettings": {
+              "type": "LakehouseWriteSettings",
+              "copyBehavior": "FlattenHierarchy"
+            },
+            "formatSettings": {
+              "type": "ParquetWriteSettings",
+              "enableVertiParquet": true
+            },
+            "datasetSettings": {
+              "annotations": [],
+              "linkedService": {
+                "name": "8f45a8a9_1c40_4841_9727_1230ee0c12b5",
+                "properties": {
+                  "annotations": [],
+                  "type": "Lakehouse",
+                  "typeProperties": {
+                    "workspaceId": "@pipeline().libraryVariables.bronzeWorkspaceId",
+                    "artifactId": "@pipeline().libraryVariables.bronzeLakehouseId",
+                    "rootFolder": "Files"
+                  }
+                }
+              },
+              "type": "Parquet",
+              "typeProperties": {
+                "location": {
+                  "type": "LakehouseLocation",
+                  "fileName": {
+                    "value": "@concat(\n    pipeline().parameters.target_table_name, '_',\n    variables('loadedAt'),\n    pipeline().parameters.file_extension\n)",
+                    "type": "Expression"
+                  },
+                  "folderPath": {
+                    "value": "@concat(\n    pipeline().parameters.target_table_path,\n    '/Pending/',\n    formatDateTime(variables('loadedAt'), 'yyyy'), '/',\n    formatDateTime(variables('loadedAt'), 'MM'), '/',\n    formatDateTime(variables('loadedAt'), 'dd'), '/'\n)",
+                    "type": "Expression"
+                  }
+                },
+                "compressionCodec": "snappy"
+              },
+              "schema": []
+            }
+          },
+          "enableStaging": false,
+          "translator": {
+            "type": "TabularTranslator",
+            "typeConversion": true,
+            "typeConversionSettings": {
+              "allowDataTruncation": true,
+              "treatBooleanAsNumber": false
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "source_name": {
+        "type": "string"
+      },
+      "source_database_name": {
+        "type": "string"
+      },
+      "source_schema": {
+        "type": "string"
+      },
+      "source_table_name": {
+        "type": "string"
+      },
+      "target_table_name": {
+        "type": "string"
+      },
+      "target_table_path": {
+        "type": "string"
+      },
+      "file_extension": {
+        "type": "string"
+      }
+    },
+    "variables": {
+      "loadedAt": {
+        "type": "String"
+      }
+    },
+    "libraryVariables": {
+      "sqlServerConnectionId": {
+        "type": "String",
+        "variableName": "sqlServerConnectionId",
+        "libraryName": "DE_VL_SOURCES_VARIABLES"
+      },
+      "lakehouseConnectionId": {
+        "type": "String",
+        "variableName": "lakehouseConnectionId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "bronzeLakehouseId": {
+        "type": "String",
+        "variableName": "bronzeLakehouseId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "bronzeWorkspaceId": {
+        "type": "String",
+        "variableName": "bronzeWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlWorkspaceId": {
+        "type": "String",
+        "variableName": "controlWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "udfId": {
+        "type": "String",
+        "variableName": "udfId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      }
+    }
+  }
+}

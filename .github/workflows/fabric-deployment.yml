@@ -1,0 +1,117 @@
+name: fabric-deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice        
+        required: true
+        default: 'DEV'
+        options: 
+        - DEV   
+        - PRO 
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
+
+jobs:
+  set-environment:
+      runs-on: ubuntu-latest
+      outputs:
+        current_env: ${{ steps.set_env.outputs.current_env }}
+      steps:
+        - name: Check if PRO execution
+          if: endsWith(github.ref, '/main') && github.event_name != 'workflow_dispatch'
+          run: |
+            echo "ENVIRONMENT_NAME=PRO" >> $GITHUB_ENV
+        - name: Check if manual run
+          if: endsWith(github.ref, '/main') && github.event_name == 'workflow_dispatch'
+          run: |
+            echo "ENVIRONMENT_NAME=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+        - name: Cancel if triggered from different branch
+          if: ${{ !endsWith(github.ref, '/main') }}
+          run: |
+            echo "ENVIRONMENT_NAME=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+        - name: Set output
+          id: set_env
+          run: echo "current_env=${{ env.ENVIRONMENT_NAME }}" >> $GITHUB_OUTPUT
+  deploy:
+    runs-on: ubuntu-latest
+    needs: set-environment
+    environment: ${{ needs.set-environment.outputs.current_env }}
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip' # caching pip dependencies
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ./src/requirements.txt
+          
+      - name: Log in to Fabric CLI
+        run: |
+          fab config set fab_encryption_fallback_enabled true
+          FED_TOKEN=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r '.value')
+          fab auth login -t ${{ secrets.AZURE_TENANT_ID }} -u ${{ secrets.AZURE_CLIENT_ID }} --federated-token $FED_TOKEN
+          
+      - name: Run installation script
+        env:
+          FAB_CAPACITY: ${{ vars.FAB_CAPACITY }}
+          CONTROL_WORKSPACE_NAME: ${{ vars.CONTROL_WORKSPACE_NAME }}
+          METADATA_DATABASE: ${{ vars.METADATA_DATABASE }}
+          BRONZE_WORKSPACE_NAME: ${{ vars.BRONZE_WORKSPACE_NAME }}
+          BRONZE_LAKEHOUSE_NAME: ${{ vars.BRONZE_LAKEHOUSE_NAME }}
+          SILVER_WORKSPACE_NAME: ${{ vars.SILVER_WORKSPACE_NAME }}
+          SILVER_LAKEHOUSE_NAME: ${{ vars.SILVER_LAKEHOUSE_NAME }}
+          GOLD_WORKSPACE_NAME: ${{ vars.GOLD_WORKSPACE_NAME }}
+          GOLD_LAKEHOUSE_NAME: ${{ vars.GOLD_LAKEHOUSE_NAME }}
+          FAB_ADMIN_UPNS: ${{ secrets.FAB_ADMIN_UPNS }}
+        run: |
+          python scripts/cicd/install.py
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # SP requires:
+      #  - Contributor permissions over Fabric capacity
+      #  - User permissions over the connections to data sources
+      - name: Deploy items
+        run: |
+          python ./scripts/cicd/publish.py --WorkspaceId ${{ env.CONTROL_WORKSPACE_ID }} --Environment ${{ needs.set-environment.outputs.current_env }} --RepositoryDirectory ./src
+          
+      - name: Build database project
+        run: |
+          dotnet tool install -g microsoft.sqlpackage
+          dotnet build
+        working-directory: sql/${{ vars.METADATA_DATABASE }}
+
+      - name: Get metadata database connection properties
+        run: |
+          # Note: You should therefore access the env variable in another step instead of in the same one
+          echo "SQL_CONNECTION_STRING=$(fab get /${{ vars.CONTROL_WORKSPACE_NAME }}.Workspace/${{ vars.METADATA_DATABASE }}.SQLDatabase -q properties.connectionString)" >> $GITHUB_ENV
+          fab auth logout
+
+      - name: Publish dacpac
+        uses: Azure/sql-action@v2.3
+        with:
+          # The connection string, including authentication information, for the Azure SQL Server database.
+          connection-string: '${{ env.SQL_CONNECTION_STRING }};Authentication=Active Directory Default'
+          # Path to DACPAC file to deploy
+          path: ./sql/${{ vars.METADATA_DATABASE }}/bin/Debug/${{ vars.METADATA_DATABASE }}.dacpac
+          action: publish
+          # additional SqlPackage arguments
+          arguments: '/Profile:sql/${{ vars.METADATA_DATABASE }}/${{ vars.METADATA_DATABASE }}.publish.xml /v:Environment="DEV"'

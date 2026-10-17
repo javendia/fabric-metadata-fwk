@@ -1,0 +1,137 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/variableLibrary/definition/variables/1.0.0/schema.json",
+  "variables": [
+    {
+      "name": "controlDatabaseConnectionId",
+      "note": "",
+      "type": "Guid",
+      "value": "a2ce90f9-9dbd-47fa-8fb0-0e075e432578"
+    },
+    {
+      "name": "controlWorkspaceId",
+      "note": "",
+      "type": "Guid",
+      "value": "def9f14b-abbe-43aa-9509-0a585accdd3a"
+    },
+    {
+      "name": "controlDatabaseId",
+      "note": "",
+      "type": "Guid",
+      "value": "e160ffb6-7333-4ed6-84d6-15b77591b67f"
+    },
+    {
+      "name": "controlSchema",
+      "note": "",
+      "type": "String",
+      "value": "md"
+    },
+    {
+      "name": "lakehouseConnectionId",
+      "note": "",
+      "type": "Guid",
+      "value": "92b50826-8aae-4845-a0ca-edd726a1b3db"
+    },
+    {
+      "name": "bronzeWorkspaceId",
+      "note": "",
+      "type": "Guid",
+      "value": "ca7b88ec-a3e6-48f7-9117-29cc5b7946a8"
+    },
+    {
+      "name": "bronzeLakehouseId",
+      "note": "",
+      "type": "Guid",
+      "value": "b17c38d1-d11c-48ed-b6ff-9fd35dedfdc3"
+    },
+    {
+      "name": "udfId",
+      "note": "",
+      "type": "Guid",
+      "value": "07343991-2aa0-45a8-b988-9b72cb3ac54f"
+    },
+    {
+      "name": "controlEnrichTableName",
+      "note": "",
+      "type": "String",
+      "value": "enrich_control"
+    },
+    {
+      "name": "bronzeOrchestratorNotebookId",
+      "note": "",
+      "type": "Guid",
+      "value": "c32089d1-3310-419d-8a91-afb934255ff4"
+    },
+    {
+      "name": "silverWorkspaceId",
+      "note": "",
+      "type": "Guid",
+      "value": "ca7b88ec-a3e6-48f7-9117-29cc5b7946a8"
+    },
+    {
+      "name": "silverLakehouseId",
+      "note": "",
+      "type": "Guid",
+      "value": "fe1a961c-bfbc-4752-9d7c-c2ae6a2624ee"
+    },
+    {
+      "name": "silverOrchestratorNotebookId",
+      "note": "",
+      "type": "Guid",
+      "value": "ffd035ea-fa62-48f2-a46a-fb9c2d32520d"
+    },
+    {
+      "name": "bronzeLakehouseName",
+      "note": "",
+      "type": "String",
+      "value": "DE_LH_BRONZE"
+    },
+    {
+      "name": "goldWorkspaceId",
+      "note": "",
+      "type": "Guid",
+      "value": "ca7b88ec-a3e6-48f7-9117-29cc5b7946a8"
+    },
+    {
+      "name": "goldLakehouseId",
+      "note": "",
+      "type": "Guid",
+      "value": "2a8e80b2-3ff9-4aa3-8840-d24d0c97032c"
+    },
+    {
+      "name": "calendarNotebookId",
+      "note": "",
+      "type": "Guid",
+      "value": "4388b199-5d57-448c-859d-110be55e699a"
+    },
+    {
+      "name": "ingestionPipelineId",
+      "note": "",
+      "type": "Guid",
+      "value": "2e2d07e2-c87c-4b4b-92dd-0c5c168331ed"
+    },
+    {
+      "name": "controlCuratedTableName",
+      "note": "",
+      "type": "String",
+      "value": "curated_control"
+    },
+    {
+      "name": "goldOrchestratorNotebookId",
+      "note": "",
+      "type": "Guid",
+      "value": "932dce49-55d3-4040-9be9-7706d0305c2f"
+    },
+    {
+      "name": "goldLakehouseName",
+      "note": "",
+      "type": "String",
+      "value": "DE_LH_GOLD"
+    },
+    {
+      "name": "maintenanceNotebookId",
+      "note": "",
+      "type": "Guid",
+      "value": "ebbb0f74-b86d-4212-a121-81d80c14b1f9"
+    }
+  ]
+}

@@ -1,0 +1,253 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "name": "ACT_COPY_InsertMetadataTableTemp",
+        "type": "Copy",
+        "dependsOn": [
+          {
+            "activity": "ACT_VL_SetTempTableName",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "source": {
+            "type": "SqlServerSource",
+            "additionalColumns": [
+              {
+                "name": "sqlserver_source_id",
+                "value": {
+                  "value": "@pipeline().parameters.sqlserver_source_id",
+                  "type": "Expression"
+                }
+              },
+              {
+                "name": "source_name",
+                "value": {
+                  "value": "@pipeline().parameters.source_name",
+                  "type": "Expression"
+                }
+              },
+              {
+                "name": "source_schema",
+                "value": {
+                  "value": "@pipeline().parameters.source_schema",
+                  "type": "Expression"
+                }
+              },
+              {
+                "name": "source_table_columns",
+                "value": {
+                  "value": "*",
+                  "type": "Expression"
+                }
+              },
+              {
+                "name": "target_root_path",
+                "value": {
+                  "value": "@concat(\n    variables('rootPath'),\n    pipeline().parameters.source_name, '/',\n    pipeline().parameters.source_type, '/',\n    pipeline().parameters.source_server, '_',\n    pipeline().parameters.source_database_name\n)",
+                  "type": "Expression"
+                }
+              }
+            ],
+            "sqlReaderQuery": {
+              "value": "@replace(\n    'SELECT\n\ttab.[name] AS [source_table_name],\n    REPLACE(LEFT(column_names, len(column_names)-1), '' '', '''') AS [primary_key]\nFROM sys.tables tab\n    LEFT JOIN sys.indexes pk\n        ON tab.object_id = pk.object_id \n        AND pk.is_primary_key = 1\n\tCROSS APPLY (SELECT col.[name] + '', ''\n\t\t\t\t\tFROM sys.index_columns ic\n\t\t\t\t\t\tinner join sys.columns col\n\t\t\t\t\t\t\tON ic.object_id = col.object_id\n\t\t\t\t\t\t\tAND ic.column_id = col.column_id\n\t\t\t\t\tWHERE ic.object_id = tab.object_id\n\t\t\t\t\t\tAND ic.index_id = pk.index_id\n\t\t\t\t\t\t\tORDER BY col.column_id\n\t\t\t\t\t\t\tfor xml path ('''')) D (column_names)\nWHERE tab.name IN ({source_tables})\nORDER BY schema_name(tab.schema_id),\n    tab.[name]',\n\t'{source_tables}', pipeline().parameters.source_tables\n)",
+              "type": "Expression"
+            },
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None",
+            "datasetSettings": {
+              "annotations": [],
+              "type": "SqlServerTable",
+              "schema": [],
+              "typeProperties": {
+                "database": {
+                  "value": "@pipeline().parameters.source_database_name",
+                  "type": "Expression"
+                }
+              },
+              "externalReferences": {
+                "connection": "@pipeline().libraryVariables.sqlServerConnectionId"
+              }
+            }
+          },
+          "sink": {
+            "type": "FabricSqlDatabaseSink",
+            "preCopyScript": {
+              "value": "@replace(\n    'TRUNCATE TABLE {tempTable}',\n     '{tempTable}', \n     concat(\n        pipeline().libraryVariables.controlSchema,\n        '.',\n        variables('tempTable')\n    )\n)",
+              "type": "Expression"
+            },
+            "writeBehavior": "insert",
+            "sqlWriterUseTableLock": false,
+            "datasetSettings": {
+              "annotations": [],
+              "connectionSettings": {
+                "name": "46e038b1_c4e6_4e35_b199_1da6040a66fd",
+                "properties": {
+                  "annotations": [],
+                  "type": "FabricSqlDatabase",
+                  "typeProperties": {
+                    "workspaceId": "@pipeline().libraryVariables.controlWorkspaceId",
+                    "artifactId": "@pipeline().libraryVariables.controlDatabaseId"
+                  },
+                  "externalReferences": {
+                    "connection": "@pipeline().libraryVariables.controlDatabaseConnectionId"
+                  }
+                }
+              },
+              "type": "FabricSqlDatabaseTable",
+              "schema": [],
+              "typeProperties": {
+                "schema": {
+                  "value": "@pipeline().libraryVariables.controlSchema",
+                  "type": "Expression"
+                },
+                "table": {
+                  "value": "@variables('tempTable')",
+                  "type": "Expression"
+                }
+              }
+            }
+          },
+          "enableStaging": false,
+          "translator": {
+            "type": "TabularTranslator",
+            "typeConversion": true,
+            "typeConversionSettings": {
+              "allowDataTruncation": true,
+              "treatBooleanAsNumber": false
+            }
+          }
+        }
+      },
+      {
+        "name": "ACT_VL_SetTempTableName",
+        "type": "SetVariable",
+        "dependsOn": [],
+        "policy": {
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "variableName": "tempTable",
+          "value": {
+            "value": "@concat(\n    pipeline().libraryVariables.sqlServerMdEntitiesTableName, \n    '_temp'\n)",
+            "type": "Expression"
+          }
+        }
+      },
+      {
+        "name": "ACT_SP_InsertMetadataTables",
+        "type": "SqlServerStoredProcedure",
+        "dependsOn": [
+          {
+            "activity": "ACT_COPY_InsertMetadataTableTemp",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "storedProcedureName": {
+            "value": "[md].[sp_md_sqlserver_mergetables]",
+            "type": "Expression"
+          }
+        },
+        "connectionSettings": {
+          "name": "7e077947_fea0_4308_b7d1_1909190478ec",
+          "properties": {
+            "annotations": [],
+            "type": "FabricSqlDatabase",
+            "typeProperties": {
+              "workspaceId": "@pipeline().libraryVariables.controlWorkspaceId",
+              "artifactId": "@pipeline().libraryVariables.controlDatabaseId"
+            },
+            "externalReferences": {
+              "connection": "@pipeline().libraryVariables.controlDatabaseConnectionId"
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "sqlserver_source_id": {
+        "type": "string"
+      },
+      "source_name": {
+        "type": "string"
+      },
+      "source_type": {
+        "type": "string"
+      },
+      "source_server": {
+        "type": "string"
+      },
+      "source_database_name": {
+        "type": "string"
+      },
+      "source_schema": {
+        "type": "string"
+      },
+      "source_tables": {
+        "type": "string"
+      }
+    },
+    "variables": {
+      "tempTable": {
+        "type": "String"
+      },
+      "rootPath": {
+        "type": "String",
+        "defaultValue": "Data/Landing/"
+      }
+    },
+    "libraryVariables": {
+      "sqlServerConnectionId": {
+        "type": "String",
+        "variableName": "sqlServerConnectionId",
+        "libraryName": "DE_VL_SOURCES_VARIABLES"
+      },
+      "controlDatabaseConnectionId": {
+        "type": "String",
+        "variableName": "controlDatabaseConnectionId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlWorkspaceId": {
+        "type": "String",
+        "variableName": "controlWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlDatabaseId": {
+        "type": "String",
+        "variableName": "controlDatabaseId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlSchema": {
+        "type": "String",
+        "variableName": "controlSchema",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "sqlServerMdEntitiesTableName": {
+        "type": "String",
+        "variableName": "sqlServerMdEntitiesTableName",
+        "libraryName": "DE_VL_SOURCES_VARIABLES"
+      }
+    }
+  }
+}

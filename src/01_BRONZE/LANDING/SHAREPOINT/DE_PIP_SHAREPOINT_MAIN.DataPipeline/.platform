@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "DataPipeline",
+    "displayName": "DE_PIP_SHAREPOINT_MAIN"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "da790dc3-6e31-a806-4aa2-905d1e8c7403"
+  }
+}

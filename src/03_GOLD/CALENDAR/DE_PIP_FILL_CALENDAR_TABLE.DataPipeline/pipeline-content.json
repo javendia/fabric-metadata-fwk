@@ -1,0 +1,79 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "name": "ACT_NB_CreateCalendarTable",
+        "type": "TridentNotebook",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": {
+            "value": "@pipeline().libraryVariables.calendarNotebookId",
+            "type": "Expression"
+          },
+          "workspaceId": {
+            "value": "@pipeline().libraryVariables.controlWorkspaceId",
+            "type": "Expression"
+          },
+          "parameters": {
+            "gold_workspace_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.goldWorkspaceId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "gold_lakehouse_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.goldLakehouseId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "from_date": {
+              "value": {
+                "value": "@pipeline().parameters.fromDate",
+                "type": "Expression"
+              },
+              "type": "string"
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "fromDate": {
+        "type": "string",
+        "defaultValue": "2023-01-01"
+      }
+    },
+    "libraryVariables": {
+      "controlWorkspaceId": {
+        "type": "String",
+        "variableName": "controlWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "goldWorkspaceId": {
+        "type": "String",
+        "variableName": "goldWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "goldLakehouseId": {
+        "type": "String",
+        "variableName": "goldLakehouseId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "calendarNotebookId": {
+        "type": "String",
+        "variableName": "calendarNotebookId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      }
+    }
+  }
+}

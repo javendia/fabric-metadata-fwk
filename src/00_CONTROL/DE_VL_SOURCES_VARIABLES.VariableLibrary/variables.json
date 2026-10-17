@@ -1,0 +1,77 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/variableLibrary/definition/variables/1.0.0/schema.json",
+  "variables": [
+    {
+      "name": "sqlServerConnectionId",
+      "note": "",
+      "type": "Guid",
+      "value": "3c52b453-b2b7-4296-866e-8bf65ae733ff"
+    },
+    {
+      "name": "sqlServerMdSourcesTableName",
+      "note": "",
+      "type": "String",
+      "value": "sqlserver_ingest_control_sources"
+    },
+    {
+      "name": "sqlServerMdEntitiesTableName",
+      "note": "",
+      "type": "String",
+      "value": "sqlserver_ingest_control_tables"
+    },
+    {
+      "name": "sqlServerGetMdSourcesPipelineId",
+      "note": "",
+      "type": "Guid",
+      "value": "26a08c38-acb7-4b02-9c9f-62d397875140"
+    },
+    {
+      "name": "sqlServerGetMdTablesPipelineId",
+      "note": "",
+      "type": "Guid",
+      "value": "bc3b2959-a9f0-4f1d-b016-30d122e61ff5"
+    },
+    {
+      "name": "sqlServerMainPipelineId",
+      "note": "",
+      "type": "Guid",
+      "value": "ba5c7fba-cb65-4997-92cf-f22d8f2a4fd7"
+    },
+    {
+      "name": "sqlServerFullPipelineId",
+      "note": "",
+      "type": "Guid",
+      "value": "1475e472-c826-4043-b1df-85c2ac537d76"
+    },
+    {
+      "name": "sharepointMdSourcesTableName",
+      "note": "",
+      "type": "String",
+      "value": "sharepoint_ingest_control_sources"
+    },
+    {
+      "name": "sharePointMdEntitiesTableName",
+      "note": "",
+      "type": "String",
+      "value": "sharepoint_ingest_control_patterns"
+    },
+    {
+      "name": "sharepointMainPipelineId",
+      "note": "",
+      "type": "Guid",
+      "value": "1e8c7403-905d-4aa2-a806-6e31da790dc3"
+    },
+    {
+      "name": "sharepointExtractorNotebookId",
+      "note": "",
+      "type": "Guid",
+      "value": "87cfca97-fe11-4505-bd7b-1d53ee873b2c"
+    },
+    {
+      "name": "sourcesTableName",
+      "note": "",
+      "type": "String",
+      "value": "ingest_control_sources"
+    }
+  ]
+}

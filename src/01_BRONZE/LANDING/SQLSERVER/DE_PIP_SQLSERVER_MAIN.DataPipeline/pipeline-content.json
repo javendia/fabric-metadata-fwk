@@ -1,0 +1,191 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "name": "ACT_LKP_SQLSERVER_ListTables",
+        "type": "Lookup",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "source": {
+            "type": "FabricSqlDatabaseSource",
+            "sqlReaderQuery": {
+              "value": "@replace(\n    replace(\n        replace(\n            replace(\n                'SELECT\n                    ics.source_database_name AS [source_database_name],\n                    ics.source_schema AS [source_schema],\n                    ict.source_table_name AS [source_table_name],\n                    ict.source_table_name AS [target_table_name],\n                    ict.target_table_path AS [target_table_path],\n                    ict.file_extension AS [file_extension],\n                    ict.load_pattern_id AS [load_pattern_id],\n                    ict.enable_flag AS [enable_flag]\n                FROM [{control_schema}].[{sqlserver_control_sources}] AS ics\n                INNER JOIN [{control_schema}].[{sqlserver_control_tables}] AS ict\n                ON ics.id = ict.sqlserver_source_id\n                WHERE ics.source_id = {source_id}\n                AND ict.enable_flag = 1',\n                '{control_schema}', pipeline().libraryVariables.controlSchema\n            ),\n            '{sqlserver_control_sources}', pipeline().libraryVariables.sqlServerMdSourcesTableName\n        ),\n        '{sqlserver_control_tables}', pipeline().libraryVariables.sqlServerMdEntitiesTableName\n    ),\n    '{source_id}', string(pipeline().parameters.source_id)\n)",
+              "type": "Expression"
+            },
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None"
+          },
+          "firstRowOnly": false,
+          "datasetSettings": {
+            "annotations": [],
+            "connectionSettings": {
+              "name": "66698329_dfe7_4325_9ea5_85f3aa38f5f0",
+              "properties": {
+                "annotations": [],
+                "type": "FabricSqlDatabase",
+                "typeProperties": {
+                  "workspaceId": "@pipeline().libraryVariables.controlWorkspaceId",
+                  "artifactId": "@pipeline().libraryVariables.controlDatabaseId"
+                },
+                "externalReferences": {
+                  "connection": "@pipeline().libraryVariables.controlDatabaseConnectionId"
+                }
+              }
+            },
+            "type": "FabricSqlDatabaseTable",
+            "schema": [],
+            "typeProperties": {}
+          }
+        }
+      },
+      {
+        "name": "ACT_FOR_SQLSEVER_ExtractTables",
+        "type": "ForEach",
+        "dependsOn": [
+          {
+            "activity": "ACT_LKP_SQLSERVER_ListTables",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "items": {
+            "value": "@activity('ACT_LKP_SQLSERVER_ListTables').output.value",
+            "type": "Expression"
+          },
+          "activities": [
+            {
+              "name": "ACT_SWITCH_SQLSERVER_LoadType",
+              "type": "Switch",
+              "dependsOn": [],
+              "typeProperties": {
+                "on": {
+                  "value": "@if(equals(item().load_pattern_id, 1), 'FULL', 'N/D')",
+                  "type": "Expression"
+                },
+                "cases": [
+                  {
+                    "value": "FULL",
+                    "activities": [
+                      {
+                        "name": "ACT_IVK_SQLSERVER_Full",
+                        "type": "InvokePipeline",
+                        "dependsOn": [],
+                        "policy": {
+                          "timeout": "0.12:00:00",
+                          "retry": 0,
+                          "retryIntervalInSeconds": 30,
+                          "secureOutput": false,
+                          "secureInput": false
+                        },
+                        "typeProperties": {
+                          "waitOnCompletion": true,
+                          "operationType": "InvokeFabricPipeline",
+                          "pipelineId": {
+                            "value": "@pipeline().libraryVariables.sqlServerFullPipelineId",
+                            "type": "Expression"
+                          },
+                          "workspaceId": {
+                            "value": "@pipeline().libraryVariables.controlWorkspaceId",
+                            "type": "Expression"
+                          },
+                          "parameters": {
+                            "source_name": {
+                              "value": "@pipeline().parameters.source_name",
+                              "type": "Expression"
+                            },
+                            "source_database_name": {
+                              "value": "@item().source_database_name",
+                              "type": "Expression"
+                            },
+                            "source_schema": {
+                              "value": "@item().source_schema",
+                              "type": "Expression"
+                            },
+                            "source_table_name": {
+                              "value": "@item().source_table_name",
+                              "type": "Expression"
+                            },
+                            "target_table_name": {
+                              "value": "@item().target_table_name",
+                              "type": "Expression"
+                            },
+                            "target_table_path": {
+                              "value": "@item().target_table_path",
+                              "type": "Expression"
+                            },
+                            "file_extension": {
+                              "value": "@item().file_extension",
+                              "type": "Expression"
+                            }
+                          }
+                        },
+                        "externalReferences": {
+                          "connection": "3cc040d3-1144-4f1b-a0fe-2a8c3503a67a"
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "defaultActivities": []
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "parameters": {
+      "source_id": {
+        "type": "int"
+      },
+      "source_name": {
+        "type": "string"
+      }
+    },
+    "libraryVariables": {
+      "controlDatabaseConnectionId": {
+        "type": "String",
+        "variableName": "controlDatabaseConnectionId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlWorkspaceId": {
+        "type": "String",
+        "variableName": "controlWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlDatabaseId": {
+        "type": "String",
+        "variableName": "controlDatabaseId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlSchema": {
+        "type": "String",
+        "variableName": "controlSchema",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "sqlServerMdSourcesTableName": {
+        "type": "String",
+        "variableName": "sqlServerMdSourcesTableName",
+        "libraryName": "DE_VL_SOURCES_VARIABLES"
+      },
+      "sqlServerMdEntitiesTableName": {
+        "type": "String",
+        "variableName": "sqlServerMdEntitiesTableName",
+        "libraryName": "DE_VL_SOURCES_VARIABLES"
+      },
+      "sqlServerFullPipelineId": {
+        "type": "String",
+        "variableName": "sqlServerFullPipelineId",
+        "libraryName": "DE_VL_SOURCES_VARIABLES"
+      }
+    }
+  }
+}

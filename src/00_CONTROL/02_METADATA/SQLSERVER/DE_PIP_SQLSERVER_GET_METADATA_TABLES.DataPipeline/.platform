@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "DataPipeline",
+    "displayName": "DE_PIP_SQLSERVER_GET_METADATA_TABLES"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "22e61ff5-30d1-b016-4f1d-a9f0bc3b2959"
+  }
+}

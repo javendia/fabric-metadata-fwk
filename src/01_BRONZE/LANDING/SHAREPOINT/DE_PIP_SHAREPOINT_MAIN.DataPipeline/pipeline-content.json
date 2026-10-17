@@ -1,0 +1,274 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "name": "ACT_LKP_GetLists",
+        "type": "Lookup",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "source": {
+            "type": "FabricSqlDatabaseSource",
+            "sqlReaderQuery": {
+              "value": "@replace(\n    replace(\n        replace(\n            'SELECT *\n            FROM [{control_schema}].[{sharepoint_control_sources}]\n            WHERE [source_id] = {source_id}', \n            '{control_schema}', pipeline().libraryVariables.controlSchema\n        ),\n        '{sharepoint_control_sources}', pipeline().libraryVariables.sharepointMdSourcesTableName\n    ),\n    '{source_id}', string(pipeline().parameters.source_id)\n)",
+              "type": "Expression"
+            },
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None"
+          },
+          "firstRowOnly": false,
+          "datasetSettings": {
+            "annotations": [],
+            "connectionSettings": {
+              "name": "c7e3f302_25ec_4bd2_be31_2af50e88e55b",
+              "properties": {
+                "annotations": [],
+                "type": "FabricSqlDatabase",
+                "typeProperties": {
+                  "workspaceId": "@pipeline().libraryVariables.controlWorkspaceId",
+                  "artifactId": "@pipeline().libraryVariables.controlDatabaseId"
+                },
+                "externalReferences": {
+                  "connection": "@pipeline().libraryVariables.controlDatabaseConnectionId"
+                }
+              }
+            },
+            "type": "FabricSqlDatabaseTable",
+            "schema": [],
+            "typeProperties": {}
+          }
+        }
+      },
+      {
+        "name": "ACT_FOR_ExtractFiles",
+        "type": "ForEach",
+        "dependsOn": [
+          {
+            "activity": "ACT_LKP_GetLists",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "items": {
+            "value": "@activity('ACT_LKP_GetLists').output.value",
+            "type": "Expression"
+          },
+          "activities": [
+            {
+              "name": "ACT_LKP_GetPatterns",
+              "type": "Lookup",
+              "dependsOn": [],
+              "policy": {
+                "timeout": "0.12:00:00",
+                "retry": 0,
+                "retryIntervalInSeconds": 30,
+                "secureOutput": false,
+                "secureInput": false
+              },
+              "typeProperties": {
+                "source": {
+                  "type": "FabricSqlDatabaseSource",
+                  "sqlReaderQuery": {
+                    "value": "@replace(\n    replace(\n        replace(\n            'SELECT * \n            FROM [{control_schema}].[{sharepoint_control_patterns}]\n                WHERE enable_flag = 1\n                AND sharepoint_source_id = {source_id}',\n            '{control_schema}', pipeline().libraryVariables.controlSchema\n        ),\n        '{sharepoint_control_patterns}',\n        pipeline().libraryVariables.sharePointMdEntitiesTableName\n    ),\n    '{source_id}',\n    string(item().id)\n)",
+                    "type": "Expression"
+                  },
+                  "queryTimeout": "02:00:00",
+                  "partitionOption": "None"
+                },
+                "firstRowOnly": false,
+                "datasetSettings": {
+                  "annotations": [],
+                  "connectionSettings": {
+                    "name": "98d7941c_3123_43a7_9bdf_5b2aab5bcf27",
+                    "properties": {
+                      "annotations": [],
+                      "type": "FabricSqlDatabase",
+                      "typeProperties": {
+                        "workspaceId": "@pipeline().libraryVariables.controlWorkspaceId",
+                        "artifactId": "@pipeline().libraryVariables.controlDatabaseId"
+                      },
+                      "externalReferences": {
+                        "connection": "@pipeline().libraryVariables.controlDatabaseConnectionId"
+                      }
+                    }
+                  },
+                  "type": "FabricSqlDatabaseTable",
+                  "schema": [],
+                  "typeProperties": {}
+                }
+              }
+            },
+            {
+              "name": "ACT_NB_GetSharePointFiles",
+              "type": "TridentNotebook",
+              "dependsOn": [
+                {
+                  "activity": "ACT_LKP_GetPatterns",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ],
+              "policy": {
+                "timeout": "0.12:00:00",
+                "retry": 0,
+                "retryIntervalInSeconds": 30,
+                "secureOutput": false,
+                "secureInput": false
+              },
+              "typeProperties": {
+                "notebookId": {
+                  "value": "@pipeline().libraryVariables.sharepointExtractorNotebookId",
+                  "type": "Expression"
+                },
+                "workspaceId": {
+                  "value": "@pipeline().libraryVariables.controlWorkspaceId",
+                  "type": "Expression"
+                },
+                "parameters": {
+                  "site_id": {
+                    "value": {
+                      "value": "@item().site_id",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "resource": {
+                    "value": {
+                      "value": "@item().resource",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "list_name": {
+                    "value": {
+                      "value": "@item().list_name",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "kv": {
+                    "value": {
+                      "value": "@item().key_vault",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "client_id_secret_name": {
+                    "value": {
+                      "value": "@item().client_id_secret_name",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "client_secret_name": {
+                    "value": {
+                      "value": "@item().client_secret_name",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "tenant_secret_name": {
+                    "value": {
+                      "value": "@item().tenant_secret_name",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "url_root_folder": {
+                    "value": {
+                      "value": "@item().url_root_path",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "url_subfolder": {
+                    "value": {
+                      "value": "@item().url_relative_path",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "filter_patterns": {
+                    "value": {
+                      "value": "@item().filter_patterns",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  },
+                  "patterns_files": {
+                    "value": {
+                      "value": "@string(activity('ACT_LKP_GetPatterns').output.value)",
+                      "type": "Expression"
+                    },
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "parameters": {
+      "source_id": {
+        "type": "int"
+      }
+    },
+    "variables": {
+      "test": {
+        "type": "String"
+      }
+    },
+    "libraryVariables": {
+      "controlDatabaseConnectionId": {
+        "type": "String",
+        "variableName": "controlDatabaseConnectionId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlWorkspaceId": {
+        "type": "String",
+        "variableName": "controlWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlDatabaseId": {
+        "type": "String",
+        "variableName": "controlDatabaseId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlSchema": {
+        "type": "String",
+        "variableName": "controlSchema",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "sharepointMdSourcesTableName": {
+        "type": "String",
+        "variableName": "sharepointMdSourcesTableName",
+        "libraryName": "DE_VL_SOURCES_VARIABLES"
+      },
+      "sharePointMdEntitiesTableName": {
+        "type": "String",
+        "variableName": "sharePointMdEntitiesTableName",
+        "libraryName": "DE_VL_SOURCES_VARIABLES"
+      },
+      "sharepointMainPipelineId": {
+        "type": "String",
+        "variableName": "sharepointMainPipelineId",
+        "libraryName": "DE_VL_SOURCES_VARIABLES"
+      },
+      "sharepointExtractorNotebookId": {
+        "type": "String",
+        "variableName": "sharepointExtractorNotebookId",
+        "libraryName": "DE_VL_SOURCES_VARIABLES"
+      }
+    }
+  }
+}

@@ -1,0 +1,173 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "name": "ACT_LKP_SQLSERVER_GetSources",
+        "description": "Get sources from metadata",
+        "type": "Lookup",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "source": {
+            "type": "FabricSqlDatabaseSource",
+            "sqlReaderQuery": {
+              "value": "@replace(\n  replace(\n    replace(\n      'SELECT [id]\n          ,[source_server]\n          ,[source_database_name]\n          ,[source_schema]\n          ,[source_tables]\n      FROM [{control_schema}].[{sqlserver_control_sources}]\n      WHERE [source_id] = {id}',\n      '{control_schema}', pipeline().libraryVariables.controlSchema\n    ),\n    '{sqlserver_control_sources}', pipeline().libraryVariables.sqlServerMdSourcesTableName\n  ),\n  '{id}', string(pipeline().parameters.source_id)\n)",
+              "type": "Expression"
+            },
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None"
+          },
+          "firstRowOnly": false,
+          "datasetSettings": {
+            "annotations": [],
+            "connectionSettings": {
+              "name": "6e897b9b_227d_4c99_819c_802bfbd67c78",
+              "properties": {
+                "annotations": [],
+                "type": "FabricSqlDatabase",
+                "typeProperties": {
+                  "workspaceId": "@pipeline().libraryVariables.controlWorkspaceId",
+                  "artifactId": "@pipeline().libraryVariables.controlDatabaseId"
+                },
+                "externalReferences": {
+                  "connection": "@pipeline().libraryVariables.controlDatabaseConnectionId"
+                }
+              }
+            },
+            "type": "FabricSqlDatabaseTable",
+            "schema": [],
+            "typeProperties": {}
+          }
+        }
+      },
+      {
+        "name": "ACT_FOR_SQLSERVER_GetMetadata",
+        "description": "Get medata for each table",
+        "type": "ForEach",
+        "dependsOn": [
+          {
+            "activity": "ACT_LKP_SQLSERVER_GetSources",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "items": {
+            "value": "@activity('ACT_LKP_SQLSERVER_GetSources').output.value",
+            "type": "Expression"
+          },
+          "isSequential": true,
+          "activities": [
+            {
+              "name": "ACT_IVK_SQLSERVER_GetMetadataTables",
+              "type": "InvokePipeline",
+              "dependsOn": [],
+              "policy": {
+                "timeout": "0.12:00:00",
+                "retry": 0,
+                "retryIntervalInSeconds": 30,
+                "secureOutput": false,
+                "secureInput": false
+              },
+              "typeProperties": {
+                "waitOnCompletion": true,
+                "operationType": "InvokeFabricPipeline",
+                "pipelineId": {
+                  "value": "@pipeline().libraryVariables.sqlServerGetMdTablesPipelineId",
+                  "type": "Expression"
+                },
+                "workspaceId": {
+                  "value": "@pipeline().libraryVariables.controlWorkspaceId",
+                  "type": "Expression"
+                },
+                "parameters": {
+                  "sqlserver_source_id": {
+                    "value": "@item().id",
+                    "type": "Expression"
+                  },
+                  "source_name": {
+                    "value": "@pipeline().parameters.source_name",
+                    "type": "Expression"
+                  },
+                  "source_type": {
+                    "value": "@pipeline().parameters.source_type",
+                    "type": "Expression"
+                  },
+                  "source_server": {
+                    "value": "@item().source_server",
+                    "type": "Expression"
+                  },
+                  "source_database_name": {
+                    "value": "@item().source_database_name",
+                    "type": "Expression"
+                  },
+                  "source_schema": {
+                    "value": "@item().source_schema",
+                    "type": "Expression"
+                  },
+                  "source_tables": {
+                    "value": "@item().source_tables",
+                    "type": "Expression"
+                  }
+                }
+              },
+              "externalReferences": {
+                "connection": "3cc040d3-1144-4f1b-a0fe-2a8c3503a67a"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "parameters": {
+      "source_name": {
+        "type": "string"
+      },
+      "source_type": {
+        "type": "string"
+      },
+      "source_id": {
+        "type": "int"
+      }
+    },
+    "libraryVariables": {
+      "controlDatabaseConnectionId": {
+        "type": "String",
+        "variableName": "controlDatabaseConnectionId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlWorkspaceId": {
+        "type": "String",
+        "variableName": "controlWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlDatabaseId": {
+        "type": "String",
+        "variableName": "controlDatabaseId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlSchema": {
+        "type": "String",
+        "variableName": "controlSchema",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "sqlServerMdSourcesTableName": {
+        "type": "String",
+        "variableName": "sqlServerMdSourcesTableName",
+        "libraryName": "DE_VL_SOURCES_VARIABLES"
+      },
+      "sqlServerGetMdTablesPipelineId": {
+        "type": "String",
+        "variableName": "sqlServerGetMdTablesPipelineId",
+        "libraryName": "DE_VL_SOURCES_VARIABLES"
+      }
+    }
+  }
+}

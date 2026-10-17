@@ -1,0 +1,461 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "name": "ACT_LKP_GetBronzeEntities",
+        "type": "Lookup",
+        "dependsOn": [
+          {
+            "activity": "ACT_IVK_Ingestion",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "source": {
+            "type": "FabricSqlDatabaseSource",
+            "sqlReaderQuery": {
+              "value": "@replace(\n    replace(\n            'SELECT \n            [load_pattern_id_bronze]\n            ,[file_mask]\n            ,[entity]\n            ,[primary_key]\n        FROM [{control_schema}].[{enrich_control_table}]\n        WHERE [active_for_load_bronze] = 1',\n        '{control_schema}', pipeline().libraryVariables.controlSchema\n    ),\n    '{enrich_control_table}', pipeline().libraryVariables.controlEnrichTableName\n)",
+              "type": "Expression"
+            },
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None"
+          },
+          "firstRowOnly": false,
+          "datasetSettings": {
+            "annotations": [],
+            "connectionSettings": {
+              "name": "283a5d65_779a_47ef_9bf8_a798b971a8ec",
+              "properties": {
+                "annotations": [],
+                "type": "FabricSqlDatabase",
+                "typeProperties": {
+                  "workspaceId": "@pipeline().libraryVariables.controlWorkspaceId",
+                  "artifactId": "@pipeline().libraryVariables.controlDatabaseId"
+                },
+                "externalReferences": {
+                  "connection": "@pipeline().libraryVariables.controlDatabaseConnectionId"
+                }
+              }
+            },
+            "type": "FabricSqlDatabaseTable",
+            "schema": [],
+            "typeProperties": {}
+          }
+        }
+      },
+      {
+        "name": "ACT_NB_BRONZE_Orchestrator",
+        "type": "TridentNotebook",
+        "dependsOn": [
+          {
+            "activity": "ACT_LKP_GetBronzeEntities",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": {
+            "value": "@pipeline().libraryVariables.bronzeOrchestratorNotebookId",
+            "type": "Expression"
+          },
+          "workspaceId": {
+            "value": "@pipeline().libraryVariables.controlWorkspaceId",
+            "type": "Expression"
+          },
+          "parameters": {
+            "control_workspace_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.controlWorkspaceId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "workspace_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.bronzeWorkspaceId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "lakehouse_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.bronzeLakehouseId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "lakehouse_name": {
+              "value": {
+                "value": "@pipeline().libraryVariables.bronzeLakehouseName",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "entities": {
+              "value": {
+                "value": "@string(activity('ACT_LKP_GetBronzeEntities').output.value)",
+                "type": "Expression"
+              },
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "ACT_NB_SILVER_Orchestrator",
+        "type": "TridentNotebook",
+        "dependsOn": [
+          {
+            "activity": "ACT_LKP_GetSilverEntities",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": {
+            "value": "@pipeline().libraryVariables.silverOrchestratorNotebookId",
+            "type": "Expression"
+          },
+          "workspaceId": {
+            "value": "@pipeline().libraryVariables.controlWorkspaceId",
+            "type": "Expression"
+          },
+          "parameters": {
+            "workspace_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.silverWorkspaceId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "lakehouse_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.silverLakehouseId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "entities": {
+              "value": {
+                "value": "@string(activity('ACT_LKP_GetSilverEntities').output.value)",
+                "type": "Expression"
+              },
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "ACT_LKP_GetSilverEntities",
+        "type": "Lookup",
+        "dependsOn": [
+          {
+            "activity": "ACT_NB_BRONZE_Orchestrator",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "source": {
+            "type": "FabricSqlDatabaseSource",
+            "sqlReaderQuery": {
+              "value": "@replace(\n    replace(\n            'SELECT *\n        FROM [{control_schema}].[{enrich_control_table}]\n        WHERE [active_for_load_silver] = 1',\n        '{control_schema}', pipeline().libraryVariables.controlSchema\n    ),\n    '{enrich_control_table}', pipeline().libraryVariables.controlEnrichTableName\n)",
+              "type": "Expression"
+            },
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None"
+          },
+          "firstRowOnly": false,
+          "datasetSettings": {
+            "annotations": [],
+            "connectionSettings": {
+              "name": "283a5d65_779a_47ef_9bf8_a798b971a8ec",
+              "properties": {
+                "annotations": [],
+                "type": "FabricSqlDatabase",
+                "typeProperties": {
+                  "workspaceId": "@pipeline().libraryVariables.controlWorkspaceId",
+                  "artifactId": "@pipeline().libraryVariables.controlDatabaseId"
+                },
+                "externalReferences": {
+                  "connection": "@pipeline().libraryVariables.controlDatabaseConnectionId"
+                }
+              }
+            },
+            "type": "FabricSqlDatabaseTable",
+            "schema": [],
+            "typeProperties": {}
+          }
+        }
+      },
+      {
+        "name": "ACT_IVK_Ingestion",
+        "type": "InvokePipeline",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "waitOnCompletion": true,
+          "operationType": "InvokeFabricPipeline",
+          "pipelineId": {
+            "value": "@pipeline().libraryVariables.ingestionPipelineId",
+            "type": "Expression"
+          },
+          "workspaceId": {
+            "value": "@pipeline().libraryVariables.controlWorkspaceId",
+            "type": "Expression"
+          },
+          "parameters": {}
+        },
+        "externalReferences": {
+          "connection": "3cc040d3-1144-4f1b-a0fe-2a8c3503a67a"
+        }
+      },
+      {
+        "name": "ACT_LKP_GetGoldEntities",
+        "type": "Lookup",
+        "dependsOn": [
+          {
+            "activity": "ACT_NB_SILVER_Orchestrator",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "source": {
+            "type": "FabricSqlDatabaseSource",
+            "sqlReaderQuery": {
+              "value": "@replace(\n    replace(\n            'SELECT *\n        FROM [{control_schema}].[{curated_control_table}]\n        WHERE [active_for_load_gold] = 1',\n        '{control_schema}', pipeline().libraryVariables.controlSchema\n    ),\n    '{curated_control_table}', pipeline().libraryVariables.controlCuratedTableName\n)",
+              "type": "Expression"
+            },
+            "queryTimeout": "02:00:00",
+            "partitionOption": "None"
+          },
+          "firstRowOnly": false,
+          "datasetSettings": {
+            "annotations": [],
+            "connectionSettings": {
+              "name": "c5e7b792_f431_4f9c_bc6b_57122f0adb06",
+              "properties": {
+                "annotations": [],
+                "type": "FabricSqlDatabase",
+                "typeProperties": {
+                  "workspaceId": "@pipeline().libraryVariables.controlWorkspaceId",
+                  "artifactId": "@pipeline().libraryVariables.controlDatabaseId"
+                },
+                "externalReferences": {
+                  "connection": "@pipeline().libraryVariables.controlDatabaseConnectionId"
+                }
+              }
+            },
+            "type": "FabricSqlDatabaseTable",
+            "schema": [],
+            "typeProperties": {}
+          }
+        }
+      },
+      {
+        "name": "ACT_NB_GOLD_Orchestrator",
+        "type": "TridentNotebook",
+        "dependsOn": [
+          {
+            "activity": "ACT_LKP_GetGoldEntities",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": {
+            "value": "@pipeline().libraryVariables.goldOrchestratorNotebookId",
+            "type": "Expression"
+          },
+          "workspaceId": {
+            "value": "@pipeline().libraryVariables.controlWorkspaceId",
+            "type": "Expression"
+          },
+          "parameters": {
+            "workspace_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.goldWorkspaceId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "lakehouse_id": {
+              "value": {
+                "value": "@pipeline().libraryVariables.goldLakehouseId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "lakehouse_name": {
+              "value": {
+                "value": "@pipeline().libraryVariables.goldLakehouseName",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "entities": {
+              "value": {
+                "value": "@string(activity('ACT_LKP_GetGoldEntities').output.value)",
+                "type": "Expression"
+              },
+              "type": "string"
+            }
+          }
+        }
+      }
+    ],
+    "libraryVariables": {
+      "controlDatabaseConnectionId": {
+        "type": "String",
+        "variableName": "controlDatabaseConnectionId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlWorkspaceId": {
+        "type": "String",
+        "variableName": "controlWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlDatabaseId": {
+        "type": "String",
+        "variableName": "controlDatabaseId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlSchema": {
+        "type": "String",
+        "variableName": "controlSchema",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlEnrichTableName": {
+        "type": "String",
+        "variableName": "controlEnrichTableName",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "bronzeOrchestratorNotebookId": {
+        "type": "String",
+        "variableName": "bronzeOrchestratorNotebookId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "bronzeWorkspaceId": {
+        "type": "String",
+        "variableName": "bronzeWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "bronzeLakehouseId": {
+        "type": "String",
+        "variableName": "bronzeLakehouseId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "silverOrchestratorNotebookId": {
+        "type": "String",
+        "variableName": "silverOrchestratorNotebookId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "silverWorkspaceId": {
+        "type": "String",
+        "variableName": "silverWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "silverLakehouseId": {
+        "type": "String",
+        "variableName": "silverLakehouseId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "bronzeLakehouseName": {
+        "type": "String",
+        "variableName": "bronzeLakehouseName",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "ingestionPipelineId": {
+        "type": "String",
+        "variableName": "ingestionPipelineId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "controlCuratedTableName": {
+        "type": "String",
+        "variableName": "controlCuratedTableName",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "goldWorkspaceId": {
+        "type": "String",
+        "variableName": "goldWorkspaceId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "goldLakehouseId": {
+        "type": "String",
+        "variableName": "goldLakehouseId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "goldOrchestratorNotebookId": {
+        "type": "String",
+        "variableName": "goldOrchestratorNotebookId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "goldLakehouseName": {
+        "type": "String",
+        "variableName": "goldLakehouseName",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      },
+      "transformationsNotebookId": {
+        "type": "String",
+        "variableName": "transformationsNotebookId",
+        "libraryName": "DE_VL_CONTROL_VARIABLES"
+      }
+    }
+  }
+}
